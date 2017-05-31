@@ -1,0 +1,1 @@
+INDEX VERSION 1.130+C:\Users\Matse\mazenet-server\src\de\fhaachen\.metadata\.plugins\org.eclipse.jdt.core
