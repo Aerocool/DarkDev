@@ -38,3 +38,4 @@ maze-server.iml
 .classpath
 .project
 .settings/
+/bin/
