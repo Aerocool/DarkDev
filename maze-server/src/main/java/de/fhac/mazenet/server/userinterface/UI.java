@@ -8,16 +8,14 @@ import de.fhac.mazenet.server.generated.MoveMessageType;
 import java.util.List;
 
 public interface UI {
-
-	// XXX: ich bin dafuer long in int zu aendern, damit man bei Timern mit
-	// Delay nicht mehr casten muss. Auf meinem System, wuerde der maximale
-	// Integer eine Wartezeit von abgerundet 24 Tagen zulassen. Ist meiner
-	// Meinung ausreichend ;) ~jago
-	public void displayMove(MoveMessageType mm, Board b, long moveDelay,
+    public void displayMove(MoveMessageType moveMessage, Board board, long moveDelay,
                             long shiftDelay, boolean treasureReached);
 
-	public void updatePlayerStatistics(List<Player> stats, Integer current);
-	public void init(Board b);
-	public void setGame(Game g);
-	public void gameEnded(Player winner);
+    public void updatePlayerStatistics(List<Player> statistics, Integer currentPlayerID);
+
+    public void init(Board board);
+
+    public void setGame(Game game);
+
+    public void gameEnded(Player winner);
 }

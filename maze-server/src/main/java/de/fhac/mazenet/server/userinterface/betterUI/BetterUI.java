@@ -20,27 +20,357 @@ import java.util.TreeMap;
 
 public class BetterUI extends JFrame implements UI {
 
-	int currentPlayer;
+	private static final long serialVersionUID = 2L;
+    private static final boolean animateMove = true;
+    private static final boolean animateShift = true;
+    private static final int animationFrames = 10;
+    static BetterUI instance;
+    public GraphicalCardBuffered shiftCard;
+    int currentPlayer;
 	UIBoard uiboard = new UIBoard();
 	StatsPanel statPanel = new StatsPanel();
-	private static final boolean animateMove = true;
-	private static final boolean animateShift = true;
-	private static final int animationFrames = 10;
-	private int animationState = 0;
 	Object animationFinished = new Object();
 	Timer animationTimer;
 	AnimationProperties animationProperties = null;
 	JSplitPane splitPane;
-	private JMenu MPlayerSettings;
+    private int animationState = 0;
+    private JMenu MPlayerSettings;
 	private JMenuItem MIStart;
 	private JMenuItem MIStop;
 	private JMenu jMenu1;
 	private JMenuBar jMenuBar1;
-	public GraphicalCardBuffered shiftCard;
 	private StreamToTextArea log;
 	private JRadioButtonMenuItem[] MIPlayerSelection;
+    private Game g;
+
+    private BetterUI() {
+        // Eigenname
+        super("Better MazeNet UI"); //$NON-NLS-1$
+        {
+            jMenuBar1 = new JMenuBar();
+            setJMenuBar(jMenuBar1);
+            {
+                jMenu1 = new JMenu();
+                jMenuBar1.add(jMenu1);
+                jMenu1.setText(Messages.getString("BetterUI.server")); //$NON-NLS-1$
+                {
+                    MIStart = new JMenuItem();
+                    jMenu1.add(MIStart);
+                    MIStart.setText(Messages.getString("BetterUI.start")); //$NON-NLS-1$
+                    MIStart.addActionListener(new ActionListener() {
+                        public void actionPerformed(ActionEvent evt) {
+                            MIStartActionPerformed(evt);
+                        }
+                    });
+                    // MIStart.addActionListener(new StartAction(this) );
+                }
+                {
+                    MIStop = new JMenuItem();
+                    jMenu1.add(MIStop);
+                    MIStop.setText(Messages.getString("BetterUI.stop")); //$NON-NLS-1$
+                    MIStop.addActionListener(new ActionListener() {
+                        public void actionPerformed(ActionEvent evt) {
+                            MIStopActionPerformed(evt);
+                        }
+                    });
+                    MIStart.setEnabled(true);
+                    MIStop.setEnabled(false);
+                }
+            }
+            {
+                MPlayerSettings = new JMenu();
+                jMenuBar1.add(MPlayerSettings);
+                MPlayerSettings.setText(Messages.getString("BetterUI.playerCount")); //$NON-NLS-1$
+                MIPlayerSelection = new JRadioButtonMenuItem[4];
+                {
+                    MIPlayerSelection[0] = new JRadioButtonMenuItem();
+                    MPlayerSettings.add(MIPlayerSelection[0]);
+                    MIPlayerSelection[0].setText(Messages.getString("BetterUI.OnePlayer")); //$NON-NLS-1$
+                    MIPlayerSelection[0].addActionListener(new ActionListener() {
+                        public void actionPerformed(ActionEvent evt) {
+                            Settings.NUMBER_OF_PLAYERS = 1;
+                        }
+                    });
+                }
+                {
+                    MIPlayerSelection[1] = new JRadioButtonMenuItem();
+                    MPlayerSettings.add(MIPlayerSelection[1]);
+                    MIPlayerSelection[1].setText(Messages.getString("BetterUI.TwoPlayer")); //$NON-NLS-1$
+                    MIPlayerSelection[1].addActionListener(new ActionListener() {
+                        public void actionPerformed(ActionEvent evt) {
+                            Settings.NUMBER_OF_PLAYERS = 2;
+                        }
+                    });
+                }
+                {
+                    MIPlayerSelection[2] = new JRadioButtonMenuItem();
+                    MPlayerSettings.add(MIPlayerSelection[2]);
+                    MIPlayerSelection[2].setText(Messages.getString("BetterUI.ThreePlayer")); //$NON-NLS-1$
+                    MIPlayerSelection[2].addActionListener(new ActionListener() {
+                        public void actionPerformed(ActionEvent evt) {
+                            Settings.NUMBER_OF_PLAYERS = 3;
+                        }
+                    });
+                }
+                {
+                    MIPlayerSelection[3] = new JRadioButtonMenuItem();
+                    MPlayerSettings.add(MIPlayerSelection[3]);
+                    MIPlayerSelection[3].setText(Messages.getString("BetterUI.FourPlayer")); //$NON-NLS-1$
+                    MIPlayerSelection[3].addActionListener(new ActionListener() {
+                        public void actionPerformed(ActionEvent evt) {
+                            Settings.NUMBER_OF_PLAYERS = 4;
+                        }
+                    });
+
+                }
+                ButtonGroup spielerAnz = new ButtonGroup();
+                for (JRadioButtonMenuItem item : MIPlayerSelection) {
+                    spielerAnz.add(item);
+
+                }
+                MIPlayerSelection[Settings.NUMBER_OF_PLAYERS - 1].setSelected(true);
+
+            }
+        }
+        this.setLayout(new BorderLayout());
+        this.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, uiboard, statPanel);
+        this.add(splitPane, BorderLayout.CENTER);
+        this.pack();
+        this.setSize(1000, 700);
+        splitPane.setResizeWeight(0.7);
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                // hatte ohne InvokeLater keinen Effekt
+                splitPane.setDividerLocation(0.8);
+                log = new StreamToTextArea(new JTextArea());
+                log.getTextArea().setEditable(false);
+                log.getTextArea().add(new JScrollBar());
+                Debug.addDebugger(log, Settings.DEBUGLEVEL);
+            }
+        });
+
+    }
+
+    private static Color colorForPlayer(int playerID) {
+        switch (playerID) {
+            case 0:
+                return Color.yellow;
+            case 1:
+                return Color.GREEN;
+            case 2:
+                return Color.BLACK;
+            case 3:
+                return Color.RED;
+            case 4:
+                return Color.BLUE;
+            default:
+                throw new IllegalArgumentException(Messages.getString("BetterUI.UInotPreparedForPlayerID")); //$NON-NLS-1$
+        }
+    }
+
+    public static BetterUI getInstance() {
+        if (instance == null)
+            instance = new BetterUI();
+        return instance;
+    }
+
+    private void MIStopActionPerformed(ActionEvent evt) {
+        Debug.print("MIStop.actionPerformed, event=" + evt, DebugLevel.DEBUG); //$NON-NLS-1$
+        if (g != null) {
+            g.stopGame();
+            g = null;
+        }
+        g = new Game();
+        MIStart.setEnabled(true);
+        MIStop.setEnabled(false);
+    }
+
+    private void MIStartActionPerformed(ActionEvent evt) {
+        Debug.print("MIStart.actionPerformed, event=" + evt, DebugLevel.DEBUG); //$NON-NLS-1$
+        if (g == null) {
+            setGame(new Game());
+        }
+        g.parsArgs();
+        statPanel.removeAll();
+        statPanel.initiated = false;
+        statPanel.repaint();
+        g.setUserinterface(this);
+        log.getTextArea().setText(""); //$NON-NLS-1$
+        statPanel.setLayout(new BorderLayout());
+        statPanel.add(log.getTextArea());
+        g.start();
+        MIStart.setEnabled(false);
+        MIStop.setEnabled(true);
+    }
+
+    @Override
+    public void displayMove(MoveMessageType moveMessage, Board board, long moveDelay, long shiftDelay, boolean treasureReached) {
+        // Die Dauer von shiftDelay bezieht sich auf den kompletten Shift und
+        // nicht auf einen einzelnen Frame
+        shiftDelay /= animationFrames;
+        // shiftCard.setCard(new Card(mm.getShiftCard()));
+        if (animateShift) {
+            uiboard.board.setShiftCard(moveMessage.getShiftCard());
+            animationTimer = new Timer((int) shiftDelay, new ShiftAnimationTimerOperation());
+            animationProperties = new AnimationProperties(new Position(moveMessage.getShiftPosition()));
+            synchronized (animationFinished) {
+                animationTimer.start();
+                try {
+                    animationFinished.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        uiboard.board.proceedShift(moveMessage);
+        Position oldPlayerPos = new Position(uiboard.board.findPlayer(currentPlayer));
+        uiboard.setBoard(board);
+        // repaint benoetigt alte Karten bleiben sonst,
+        // bis zur nächsten Schiebe-Animation sichtbar
+        animationTimer = new Timer((int) moveDelay,
+                new MoveAnimationTimerOperation(uiboard.board, oldPlayerPos, new Position(moveMessage.getNewPinPos())));
+        uiboard.repaint();
+        // muss nach repaint() stehen, sonst flickering!
+        shiftCard.setCard(new Card(board.getShiftCard()));
+        if (animateMove) {
+            // Falls unser Spieler sich selbst verschoben hat.
+            AnimationProperties props = new AnimationProperties(new Position(moveMessage.getShiftPosition()));
+            if (props.vertikal) {
+                if (oldPlayerPos.getCol() == props.shiftPosition.getCol()) {
+                    oldPlayerPos.setRow((7 + oldPlayerPos.getRow() + props.direction) % 7);
+                }
+            } else {
+                if (oldPlayerPos.getRow() == props.shiftPosition.getRow()) {
+                    oldPlayerPos.setCol((7 + oldPlayerPos.getCol() + props.direction) % 7);
+                }
+            }
+            synchronized (animationFinished) {
+                animationTimer.start();
+                try {
+                    animationFinished.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        if (treasureReached) {
+            ImageResources.treasureFound(board.getTreasure().value());
+        }
+    }
+
+    @Override
+    public void updatePlayerStatistics(List<Player> statistics, Integer currentPlayerID) {
+        statPanel.update(statistics, currentPlayerID);
+    }
+
+    @Override
+    public void init(Board board) {
+        ImageResources.reset();
+        uiboard.setBoard(board);
+        uiboard.repaint();
+        this.setVisible(true);
+    }
+
+    @Override
+    public void setGame(Game game) {
+        this.g = game;
+    }
+
+    @Override
+    public void gameEnded(Player winner) {
+        if (winner != null) {
+            JOptionPane.showMessageDialog(this,
+                    String.format(Messages.getString("BetterUI.playerIDwon"), winner.getName() //$NON-NLS-1$
+                            , winner.getID()));
+        }
+        MIStart.setEnabled(true);
+        MIStop.setEnabled(false);
+    }
+
+    private static class Pathfinding {
+        public static int[][] findShortestPath(Board b, Position startPos, Position endPos) {
+
+            // Dijkstra
+            boolean[][] visited = new boolean[7][7];
+            int[][] weglen = new int[7][7];
+            int[][] pfad = new int[7][7];
+            for (int y = 0; y < 7; ++y) {
+                for (int x = 0; x < 7; ++x) {
+                    weglen[y][x] = Integer.MAX_VALUE;
+                }
+            }
+
+            int currentX = startPos.getCol();
+            int currentY = startPos.getRow();
+            weglen[currentY][currentX] = 0;
+            while (true) {
+                visited[currentY][currentX] = true;
+                if (currentX > 0 && b.getCard(currentY, currentX).getOpenings().isLeft()
+                        && b.getCard(currentY, currentX - 1).getOpenings().isRight()) {
+                    if (weglen[currentY][currentX - 1] > weglen[currentY][currentX] + 1) {
+                        weglen[currentY][currentX - 1] = weglen[currentY][currentX] + 1;
+                        pfad[currentY][currentX - 1] = currentY * 7 + currentX;
+                    }
+                }
+                if (currentY > 0 && b.getCard(currentY, currentX).getOpenings().isTop()
+                        && b.getCard(currentY - 1, currentX).getOpenings().isBottom()) {
+                    if (weglen[currentY - 1][currentX] > weglen[currentY][currentX] + 1) {
+                        weglen[currentY - 1][currentX] = weglen[currentY][currentX] + 1;
+                        pfad[currentY - 1][currentX] = currentY * 7 + currentX;
+                    }
+                }
+
+                if (currentX < 6 && b.getCard(currentY, currentX).getOpenings().isRight()
+                        && b.getCard(currentY, currentX + 1).getOpenings().isLeft()) {
+                    if (weglen[currentY][currentX + 1] > weglen[currentY][currentX] + 1) {
+                        weglen[currentY][currentX + 1] = weglen[currentY][currentX] + 1;
+                        pfad[currentY][currentX + 1] = currentY * 7 + currentX;
+                    }
+                }
+                if (currentY < 6 && b.getCard(currentY, currentX).getOpenings().isBottom()
+                        && b.getCard(currentY + 1, currentX).getOpenings().isTop()) {
+                    if (weglen[currentY + 1][currentX] > weglen[currentY][currentX] + 1) {
+                        weglen[currentY + 1][currentX] = weglen[currentY][currentX] + 1;
+                        pfad[currentY + 1][currentX] = currentY * 7 + currentX;
+                    }
+                }
+
+                {
+                    int currentMinWegLen = Integer.MAX_VALUE;
+                    for (int y = 6; y >= 0; --y) {
+                        for (int x = 6; x >= 0; --x) {
+                            if (!visited[y][x] && weglen[y][x] < currentMinWegLen) {
+                                currentMinWegLen = weglen[y][x];
+                                currentX = x;
+                                currentY = y;
+                            }
+                        }
+                    }
+                    if (currentMinWegLen == Integer.MAX_VALUE)
+                        break;
+                }
+            }
+            currentX = endPos.getCol();
+            currentY = endPos.getRow();
+            int anzahlWegpunkte = weglen[currentY][currentX] + 1;
+            // Weg ist ein Array von x und y werten
+            int weg[][] = new int[anzahlWegpunkte][2];
+            int i = anzahlWegpunkte - 1;
+            while (i > 0) {
+                weg[i--] = new int[]{currentX, currentY};
+                int buf = pfad[currentY][currentX];
+                currentX = buf % 7;
+                currentY = buf / 7;
+            }
+            weg[0] = new int[]{currentX, currentY};
+            return weg;
+        }
+    }
 
 	private class UIBoard extends JPanel {
+		private static final long serialVersionUID = 2L;
 		Board board;
 		Image images[][] = new Image[7][7];
 		Card c[][] = new Card[7][7];
@@ -161,6 +491,7 @@ public class BetterUI extends JFrame implements UI {
 	}
 
 	private class StatsPanel extends JPanel {
+		private static final long serialVersionUID = 1L;
 		boolean initiated = false;
 		Map<Integer, JLabel> statLabels = new TreeMap<>();
 		Map<Integer, JLabel> currentPlayerLabels = new TreeMap<>();
@@ -241,150 +572,6 @@ public class BetterUI extends JFrame implements UI {
 		}
 	}
 
-	public BetterUI() {
-		// Eigenname
-		super("Better MazeNet UI"); //$NON-NLS-1$
-		{
-			jMenuBar1 = new JMenuBar();
-			setJMenuBar(jMenuBar1);
-			{
-				jMenu1 = new JMenu();
-				jMenuBar1.add(jMenu1);
-				jMenu1.setText(Messages.getString("BetterUI.server")); //$NON-NLS-1$
-				{
-					MIStart = new JMenuItem();
-					jMenu1.add(MIStart);
-					MIStart.setText(Messages.getString("BetterUI.start")); //$NON-NLS-1$
-					MIStart.addActionListener(new ActionListener() {
-						public void actionPerformed(ActionEvent evt) {
-							MIStartActionPerformed(evt);
-						}
-					});
-					// MIStart.addActionListener(new StartAction(this) );
-				}
-				{
-					MIStop = new JMenuItem();
-					jMenu1.add(MIStop);
-					MIStop.setText(Messages.getString("BetterUI.stop")); //$NON-NLS-1$
-					MIStop.addActionListener(new ActionListener() {
-						public void actionPerformed(ActionEvent evt) {
-							MIStopActionPerformed(evt);
-						}
-					});
-					MIStart.setEnabled(true);
-					MIStop.setEnabled(false);
-				}
-			}
-			{
-				MPlayerSettings = new JMenu();
-				jMenuBar1.add(MPlayerSettings);
-				MPlayerSettings.setText(Messages.getString("BetterUI.playerCount")); //$NON-NLS-1$
-				MIPlayerSelection = new JRadioButtonMenuItem[4];
-				{
-					MIPlayerSelection[0] = new JRadioButtonMenuItem();
-					MPlayerSettings.add(MIPlayerSelection[0]);
-					MIPlayerSelection[0].setText(Messages.getString("BetterUI.OnePlayer")); //$NON-NLS-1$
-					MIPlayerSelection[0].addActionListener(new ActionListener() {
-						public void actionPerformed(ActionEvent evt) {
-							Settings.DEFAULT_PLAYERS = 1;
-						}
-					});
-				}
-				{
-					MIPlayerSelection[1] = new JRadioButtonMenuItem();
-					MPlayerSettings.add(MIPlayerSelection[1]);
-					MIPlayerSelection[1].setText(Messages.getString("BetterUI.TwoPlayer")); //$NON-NLS-1$
-					MIPlayerSelection[1].addActionListener(new ActionListener() {
-						public void actionPerformed(ActionEvent evt) {
-							Settings.DEFAULT_PLAYERS = 2;
-						}
-					});
-				}
-				{
-					MIPlayerSelection[2] = new JRadioButtonMenuItem();
-					MPlayerSettings.add(MIPlayerSelection[2]);
-					MIPlayerSelection[2].setText(Messages.getString("BetterUI.ThreePlayer")); //$NON-NLS-1$
-					MIPlayerSelection[2].addActionListener(new ActionListener() {
-						public void actionPerformed(ActionEvent evt) {
-							Settings.DEFAULT_PLAYERS = 3;
-						}
-					});
-				}
-				{
-					MIPlayerSelection[3] = new JRadioButtonMenuItem();
-					MPlayerSettings.add(MIPlayerSelection[3]);
-					MIPlayerSelection[3].setText(Messages.getString("BetterUI.FourPlayer")); //$NON-NLS-1$
-					MIPlayerSelection[3].addActionListener(new ActionListener() {
-						public void actionPerformed(ActionEvent evt) {
-							Settings.DEFAULT_PLAYERS = 4;
-						}
-					});
-					
-				}
-				ButtonGroup spielerAnz = new ButtonGroup();
-				for (JRadioButtonMenuItem item : MIPlayerSelection) {
-					spielerAnz.add(item);
-
-				}
-				MIPlayerSelection[Settings.DEFAULT_PLAYERS-1].setSelected(true);
-				
-
-			}
-		}
-		this.setLayout(new BorderLayout());
-		this.setDefaultCloseOperation(EXIT_ON_CLOSE);
-		splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, uiboard, statPanel);
-		this.add(splitPane, BorderLayout.CENTER);
-		this.pack();
-		this.setSize(1000, 700);
-		splitPane.setResizeWeight(0.7);
-		SwingUtilities.invokeLater(new Runnable() {
-			@Override
-			public void run() {
-				// hatte ohne InvokeLater keinen Effekt
-				splitPane.setDividerLocation(0.8);
-				log = new StreamToTextArea(new JTextArea());
-				log.getTextArea().setEditable(false);
-				log.getTextArea().add(new JScrollBar());
-				Debug.addDebugger(log, Settings.DEBUGLEVEL);
-			}
-		});
-
-	}
-
-	protected static String[] arguments;
-	private Game g;
-
-	private void MIStopActionPerformed(ActionEvent evt) {
-		Debug.print("MIStop.actionPerformed, event=" + evt, DebugLevel.DEBUG); //$NON-NLS-1$
-		if (g != null) {
-			g.stopGame();
-			g = null;
-		}
-		g = new Game();
-		MIStart.setEnabled(true);
-		MIStop.setEnabled(false);
-	}
-
-	private void MIStartActionPerformed(ActionEvent evt) {
-		Debug.print("MIStart.actionPerformed, event=" + evt, DebugLevel.DEBUG); //$NON-NLS-1$
-		if (g == null) {
-			setGame(new Game());
-		}
-		arguments = new String[0];
-		g.parsArgs(arguments);
-		statPanel.removeAll();
-		statPanel.initiated = false;
-		statPanel.repaint();
-		g.setUserinterface(this);
-		log.getTextArea().setText(""); //$NON-NLS-1$
-		statPanel.setLayout(new BorderLayout());
-		statPanel.add(log.getTextArea());
-		g.start();
-		MIStart.setEnabled(false);
-		MIStop.setEnabled(true);
-	}
-
 	private class AnimationProperties {
 		public final boolean vertikal;
 		public final Position shiftPosition;
@@ -422,86 +609,6 @@ public class BetterUI extends JFrame implements UI {
 		}
 	}
 
-	private static class Pathfinding {
-		public static int[][] findShortestPath(Board b, Position startPos, Position endPos) {
-
-			// Dijkstra
-			boolean[][] visited = new boolean[7][7];
-			int[][] weglen = new int[7][7];
-			int[][] pfad = new int[7][7];
-			for (int y = 0; y < 7; ++y) {
-				for (int x = 0; x < 7; ++x) {
-					weglen[y][x] = Integer.MAX_VALUE;
-				}
-			}
-
-			int currentX = startPos.getCol();
-			int currentY = startPos.getRow();
-			weglen[currentY][currentX] = 0;
-			while (true) {
-				visited[currentY][currentX] = true;
-				if (currentX > 0 && b.getCard(currentY, currentX).getOpenings().isLeft()
-						&& b.getCard(currentY, currentX - 1).getOpenings().isRight()) {
-					if (weglen[currentY][currentX - 1] > weglen[currentY][currentX] + 1) {
-						weglen[currentY][currentX - 1] = weglen[currentY][currentX] + 1;
-						pfad[currentY][currentX - 1] = currentY * 7 + currentX;
-					}
-				}
-				if (currentY > 0 && b.getCard(currentY, currentX).getOpenings().isTop()
-						&& b.getCard(currentY - 1, currentX).getOpenings().isBottom()) {
-					if (weglen[currentY - 1][currentX] > weglen[currentY][currentX] + 1) {
-						weglen[currentY - 1][currentX] = weglen[currentY][currentX] + 1;
-						pfad[currentY - 1][currentX] = currentY * 7 + currentX;
-					}
-				}
-
-				if (currentX < 6 && b.getCard(currentY, currentX).getOpenings().isRight()
-						&& b.getCard(currentY, currentX + 1).getOpenings().isLeft()) {
-					if (weglen[currentY][currentX + 1] > weglen[currentY][currentX] + 1) {
-						weglen[currentY][currentX + 1] = weglen[currentY][currentX] + 1;
-						pfad[currentY][currentX + 1] = currentY * 7 + currentX;
-					}
-				}
-				if (currentY < 6 && b.getCard(currentY, currentX).getOpenings().isBottom()
-						&& b.getCard(currentY + 1, currentX).getOpenings().isTop()) {
-					if (weglen[currentY + 1][currentX] > weglen[currentY][currentX] + 1) {
-						weglen[currentY + 1][currentX] = weglen[currentY][currentX] + 1;
-						pfad[currentY + 1][currentX] = currentY * 7 + currentX;
-					}
-				}
-
-				{
-					int currentMinWegLen = Integer.MAX_VALUE;
-					for (int y = 6; y >= 0; --y) {
-						for (int x = 6; x >= 0; --x) {
-							if (!visited[y][x] && weglen[y][x] < currentMinWegLen) {
-								currentMinWegLen = weglen[y][x];
-								currentX = x;
-								currentY = y;
-							}
-						}
-					}
-					if (currentMinWegLen == Integer.MAX_VALUE)
-						break;
-				}
-			}
-			currentX = endPos.getCol();
-			currentY = endPos.getRow();
-			int anzahlWegpunkte = weglen[currentY][currentX] + 1;
-			// Weg ist ein Array von x und y werten
-			int weg[][] = new int[anzahlWegpunkte][2];
-			int i = anzahlWegpunkte - 1;
-			while (i > 0) {
-				weg[i--] = new int[] { currentX, currentY };
-				int buf = pfad[currentY][currentX];
-				currentX = buf % 7;
-				currentY = buf / 7;
-			}
-			weg[0] = new int[] { currentX, currentY };
-			return weg;
-		}
-	}
-
 	private class MoveAnimationTimerOperation implements ActionListener {
 		int[][] points;
 		int i = 0;
@@ -530,107 +637,6 @@ public class BetterUI extends JFrame implements UI {
 				uiboard.repaint();
 			}
 		}
-	}
-
-	@Override
-	public void displayMove(MoveMessageType mm, Board b, long moveDelay, long shiftDelay, boolean treasureReached) {
-		// Die Dauer von shiftDelay bezieht sich auf den kompletten Shift und
-		// nicht auf einen einzelnen Frame
-		shiftDelay /= animationFrames;
-		// shiftCard.setCard(new Card(mm.getShiftCard()));
-		if (animateShift) {
-			uiboard.board.setShiftCard(mm.getShiftCard());
-			animationTimer = new Timer((int) shiftDelay, new ShiftAnimationTimerOperation());
-			animationProperties = new AnimationProperties(new Position(mm.getShiftPosition()));
-			synchronized (animationFinished) {
-				animationTimer.start();
-				try {
-					animationFinished.wait();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		uiboard.board.proceedShift(mm);
-		Position oldPlayerPos = new Position(uiboard.board.findPlayer(currentPlayer));
-		uiboard.setBoard(b);
-		// repaint benoetigt alte Karten bleiben sonst,
-		// bis zur nächsten Schiebe-Animation sichtbar
-		animationTimer = new Timer((int) moveDelay,
-				new MoveAnimationTimerOperation(uiboard.board, oldPlayerPos, new Position(mm.getNewPinPos())));
-		uiboard.repaint();
-		// muss nach repaint() stehen, sonst flickering!
-		shiftCard.setCard(new Card(b.getShiftCard()));
-		if (animateMove) {
-			// Falls unser Spieler sich selbst verschoben hat.
-			AnimationProperties props = new AnimationProperties(new Position(mm.getShiftPosition()));
-			if (props.vertikal) {
-				if (oldPlayerPos.getCol() == props.shiftPosition.getCol()) {
-					oldPlayerPos.setRow((7 + oldPlayerPos.getRow() + props.direction) % 7);
-				}
-			} else {
-				if (oldPlayerPos.getRow() == props.shiftPosition.getRow()) {
-					oldPlayerPos.setCol((7 + oldPlayerPos.getCol() + props.direction) % 7);
-				}
-			}
-			synchronized (animationFinished) {
-				animationTimer.start();
-				try {
-					animationFinished.wait();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		if (treasureReached) {
-			ImageResources.treasureFound(b.getTreasure().value());
-		}
-	}
-
-	@Override
-	public void updatePlayerStatistics(List<Player> stats, Integer current) {
-		statPanel.update(stats, current);
-	}
-
-	@Override
-	public void init(Board b) {
-		ImageResources.reset();
-		uiboard.setBoard(b);
-		uiboard.repaint();
-		this.setVisible(true);
-	}
-
-	private static Color colorForPlayer(int playerID) {
-		switch (playerID) {
-		case 0:
-			return Color.yellow;
-		case 1:
-			return Color.GREEN;
-		case 2:
-			return Color.BLACK;
-		case 3:
-			return Color.RED;
-		case 4:
-			return Color.BLUE;
-		default:
-			throw new IllegalArgumentException(Messages.getString("BetterUI.UInotPreparedForPlayerID")); //$NON-NLS-1$
-		}
-	}
-
-	@Override
-	public void setGame(Game g) {
-		this.g = g;
-	}
-
-	@Override
-	public void gameEnded(Player winner) {
-		if (winner != null) {
-			JOptionPane.showMessageDialog(this,
-					String.format(Messages.getString("BetterUI.playerIDwon"), winner.getName() //$NON-NLS-1$
-							, winner.getID()));
-		}
-		MIStart.setEnabled(true);
-		MIStop.setEnabled(false);
 	}
 
 }

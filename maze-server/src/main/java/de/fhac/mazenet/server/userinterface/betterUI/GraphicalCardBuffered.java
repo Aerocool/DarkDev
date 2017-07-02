@@ -3,8 +3,8 @@ package de.fhac.mazenet.server.userinterface.betterUI;
 import de.fhac.mazenet.server.Card;
 import de.fhac.mazenet.server.Card.CardShape;
 import de.fhac.mazenet.server.Card.Orientation;
+import de.fhac.mazenet.server.config.UISettings;
 import de.fhac.mazenet.server.Messages;
-import de.fhac.mazenet.server.config.Settings;
 import de.fhac.mazenet.server.generated.TreasureType;
 import de.fhac.mazenet.server.tools.Debug;
 import de.fhac.mazenet.server.tools.DebugLevel;
@@ -67,7 +67,7 @@ public class GraphicalCardBuffered extends JPanel implements ComponentListener {
 		this.cardOrientation = co;
 		try {
 			URL url = GraphicalCardBuffered.class
-					.getResource(Settings.IMAGEPATH + cs.toString() + co.value() + Settings.IMAGEFILEEXTENSION);
+					.getResource(UISettings.IMAGEPATH + cs.toString() + co.value() + UISettings.IMAGEFILEEXTENSION);
 			Debug.print(Messages.getString("GraphicalCardBuffered.Load") + url.toString(), DebugLevel.DEBUG); //$NON-NLS-1$
 			shape = ImageIO.read(url);
 

@@ -1,78 +1,61 @@
 package client;
 
-
-
 import java.util.List;
 import java.util.Random;
 
-import de.fhac.mazenet.server.generated.CardType;
-import de.fhac.mazenet.server.generated.CardType.Openings;
-import de.fhac.mazenet.server.generated.MoveMessageType;
-import de.fhac.mazenet.server.generated.PositionType;
 import de.fhac.mazenet.server.Board;
 import de.fhac.mazenet.server.Position;
+import de.fhac.mazenet.server.generated.AwaitMoveMessageType;
+import de.fhac.mazenet.server.generated.BoardType;
+import de.fhac.mazenet.server.generated.CardType;
+import de.fhac.mazenet.server.generated.MoveMessageType;
+import de.fhac.mazenet.server.generated.PositionType;
+import de.fhac.mazenet.server.generated.TreasureType;
+import de.fhac.mazenet.server.generated.TreasuresToGoType;
+import de.fhac.mazenet.server.generated.CardType.Openings;
 
-
-
-public class Robot extends Actor  {
+public class KI {
+	private AwaitMoveMessageType awaitMoveMessage;
+	
 	private PositionType ownPosition;
 	private PositionType treasurePosition;
 	private MoveMessageType move;
 	private List<Position> possibleMoves;
 	private Board extBoard;
 	
+	private BoardType board;
+	private List<TreasuresToGoType> treasuresToGo;
+	private List<TreasureType> foundTreasures;
+	
+	private int id;
+	private TreasureType treasure;
+	
+	public KI(AwaitMoveMessageType amm, int id) {
+		awaitMoveMessage = amm;
+		this.id = id;
+		
+		board = awaitMoveMessage.getBoard();
+		treasuresToGo = awaitMoveMessage.getTreasuresToGo();
+		foundTreasures = awaitMoveMessage.getFoundTreasures();
+		treasure = awaitMoveMessage.getTreasure();
+		
+		extBoard = new Board(board);
+		
+		move = new MoveMessageType();
 
-	public Robot(TCPClient_JW client, int id) {
-		super(client, id);
-		// TODO Auto-generated constructor stub
+		ownPosition = extBoard.findPlayer( this.id );
+		treasurePosition = extBoard.findTreasure( this.treasure );
+		
+		makeFakeMove();
 	}
-
-	@Override
-	public void run() {
-		while (client.noWinnerYet()) {
-			if (newMoveRequested) {
-				// determine next KI Move
-
-				// extract awm
-				board = current_awm.getBoard();
-				treasuresToGo = current_awm.getTreasuresToGo();
-				foundTreasures = current_awm.getFoundTreasures();
-				treasure = current_awm.getTreasure();
-				
-				//init Board-Type extBoard
-				extBoard = new Board(board);
-				
-				//init move
-				move = of.createMoveMessageType();
-
-
-				ownPosition = extBoard.findPlayer( this.id );
-				treasurePosition = extBoard.findTreasure( this.treasure );
-
-				try {
-					makeFakeMove();
-					client.setMoveToSend( move );
-				}
-				catch ( InterruptedException e ) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}				
-			}  else {
-				// wait for client to requestMove
-				try {
-					Thread.sleep(500);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-
-			}
-		}
+	
+	public MoveMessageType getMove() {
+		return move;
 	}
-
-	public void makeFakeMove() throws InterruptedException{
-
-		move.setShiftCard(rotateShiftCard( randInt(0,4)));    // hier noch ein random int 0 bis 4 spendieren
-		PositionType randommove = of.createPositionType();
+	
+	private void makeFakeMove() {
+		move.setShiftCard(rotateShiftCard( randInt(0,4)));    // hier noch einen random int von 0 bis 4 spendieren
+		PositionType randommove = new PositionType();
 
 		int auswahl = randInt(0, 2);
 		while( true){
@@ -110,25 +93,18 @@ public class Robot extends Actor  {
 			}		
 			move.setShiftPosition(randommove);	
 			move.setNewPinPos(ownPosition);
-			//try {
-				extBoard = extBoard.fakeShift(move);
-			/*}
-			catch ( CloneNotSupportedException e ) {
-				System.out.println("Invalid Shift");// TODO Auto-generated catch block
-				e.printStackTrace();
-			}*/
+			extBoard = extBoard.fakeShift(move);
 			ownPosition = extBoard.findPlayer(this.id);
 			possibleMoves =  extBoard.getAllReachablePositions(ownPosition);	
 			int iBestMove = bestenZugBerechnen( treasurePosition, possibleMoves); 
-			if(extBoard.pathPossible(ownPosition, possibleMoves.get(iBestMove))){
+			if(extBoard.pathPossible(ownPosition, possibleMoves.get(iBestMove))) {
 				move.setNewPinPos(possibleMoves.get(iBestMove));
 				break;
 			}
 		}
 	}
 	
-	public int bestenZugBerechnen(PositionType treasurePosition, List<Position> allemoeglichen ){
-		 
+	private int bestenZugBerechnen(PositionType treasurePosition, List<Position> allemoeglichen ) {
 		 if( allemoeglichen.size() == 1 ){
 			 return 0;
 		 }	 
@@ -165,13 +141,12 @@ public class Robot extends Actor  {
 		return randomNum;	    
 	}
 
-	public CardType rotateShiftCard( int times ){
-
+	public CardType rotateShiftCard( int times ) {
 		CardType shiftCard = board.getShiftCard();
-		Openings cardOpenings = of.createCardTypeOpenings();  	
+		Openings cardOpenings = new Openings();  	
 		// Drehung der Shiftkarte
 		for( int i = 0; i < times; ++i ){
-			cardOpenings = of.createCardTypeOpenings();			
+			cardOpenings = new Openings();			
 			if(shiftCard.getOpenings().isTop()){
 				cardOpenings.setRight(true);
 			} 
@@ -188,5 +163,4 @@ public class Robot extends Actor  {
 		}	
 		return shiftCard;
 	}
-
 }
