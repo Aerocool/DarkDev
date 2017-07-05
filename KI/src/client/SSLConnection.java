@@ -12,7 +12,7 @@ import de.fhac.mazenet.server.networking.XmlInStream;
 import de.fhac.mazenet.server.networking.XmlOutStream;
 
 public class SSLConnection {
-	private static final String truststorePath = "myTrustStore"; // auf "public-key_maze-server.crt" umstellen, wenn nicht getestet wird
+	private static final String truststorePath = "truststore.jks"; // auf "myTrusStore" umstellen, wenn nicht getestet wird
 	private static final String password = "geheim";
 	
 	private XmlOutStream outputStream;
