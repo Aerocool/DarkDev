@@ -16,6 +16,8 @@ public class Client {
 	private static MoveMessageType getNextMove(AwaitMoveMessageType awaitMoveMessage, int id) {
 		KI ki = new KI(awaitMoveMessage, id);
 		return ki.getMove();
+//		KIThilo ki = new KIThilo(id);
+//		return ki.getNextMove(awaitMoveMessage);
 	}
 	
 	public static void main(String[] args) {
