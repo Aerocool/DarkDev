@@ -7,11 +7,10 @@ import de.fhac.mazenet.server.Position;
 import de.fhac.mazenet.server.generated.AwaitMoveMessageType;
 import de.fhac.mazenet.server.generated.BoardType;
 import de.fhac.mazenet.server.generated.CardType;
+import de.fhac.mazenet.server.generated.CardType.Openings;
 import de.fhac.mazenet.server.generated.MoveMessageType;
 import de.fhac.mazenet.server.generated.PositionType;
 import de.fhac.mazenet.server.generated.TreasureType;
-import de.fhac.mazenet.server.generated.TreasuresToGoType;
-import de.fhac.mazenet.server.generated.CardType.Openings;
 
 public class KIThilo
 implements ArtificialIntelligence {
@@ -19,12 +18,9 @@ implements ArtificialIntelligence {
 	
 	private PositionType ownPosition;
 	private PositionType treasurePosition;
-	private MoveMessageType move;
 	private Board extBoard;
 	
 	private BoardType board;
-	private List<TreasuresToGoType> treasuresToGo;
-	private List<TreasureType> foundTreasures;
 	
 	private TreasureType treasure;
 	private TurnChooser turnChooser;
@@ -33,8 +29,6 @@ implements ArtificialIntelligence {
 	
 	private void initComponents(AwaitMoveMessageType awaitMoveMessage){
 		board = awaitMoveMessage.getBoard();
-		treasuresToGo = awaitMoveMessage.getTreasuresToGo();
-		foundTreasures = awaitMoveMessage.getFoundTreasures();
 		treasure = awaitMoveMessage.getTreasure();
 		extBoard = new Board(board);
 		ownPosition = extBoard.findPlayer( this.id );
@@ -46,52 +40,48 @@ implements ArtificialIntelligence {
 	public MoveMessageType getNextMove(AwaitMoveMessageType awaitMoveMessage) {
 		initComponents(awaitMoveMessage);
 		
-//		PositionType testPosition = new PositionType();
-//		testPosition.setRow(0);
-//		testPosition.setCol(1);
-		
 		MoveMessageType move = new MoveMessageType();
 		PositionType position = new PositionType();
 		CardType card = board.getShiftCard();
-		Openings openings = new Openings();
+		
 		for(int i = 0; i < 4; i++){
 			if(i == 0){
-				openings.setBottom(true);
+				card = rotateShiftCard(1, card);
 			} else if(i == 1){
-				openings.setLeft(true);
+				card = rotateShiftCard(2, card);
 			} else if(i == 2){
-				openings.setRight(true);
+				card = rotateShiftCard(3, card);
 			} else if(i == 3){
-				openings.setTop(true);
+				card = rotateShiftCard(4, card);
 			}
-			card.setOpenings(openings);
 			for(int col = 0; col < 7; col++){
 				position.setCol(col);
 				if(col == 0 || col == 6){
 					for(int row = 1; row < 6; row += 2){
 						position.setRow(row);
-						turnChooser.addTurn(position, treasure, card, board);
+						turnChooser.addTurn(copyPositionType(position), treasure, card, board);
 					}
 				} else if(col == 1 || col == 3 || col == 5){
 					position.setRow(0);
-					turnChooser.addTurn(position, treasure, card, board);
+					turnChooser.addTurn(copyPositionType(position), treasure, card, board);
 					position.setRow(6);
-					turnChooser.addTurn(position, treasure, card, board);
+					turnChooser.addTurn(copyPositionType(position), treasure, card, board);
 				}
 			}
 		}
 		Turn turn = turnChooser.getBestTurn();
+		turnChooser.deleteAllTurns();
 		position = turn.getNewCardPosition();
 		card = turn.getCard();
 		
-		extBoard = extBoard.fakeShift(move);
-		ownPosition = extBoard.findPlayer(this.id);
-		List<Position> possibleMoves =  extBoard.getAllReachablePositions(ownPosition);
-		
 		move.setShiftPosition(position);
 		move.setShiftCard(card);
-		move.setNewPinPos(getPlayerMovement(treasure, possibleMoves));
 		
+		extBoard = extBoard.fakeShift(move);
+		ownPosition = extBoard.findPlayer(this.id);
+		List<Position> possibleMoves = extBoard.getAllReachablePositions(ownPosition);
+		
+		move.setNewPinPos(getPlayerMovement(treasure, possibleMoves));
 		return move;
 	}
 	
@@ -124,5 +114,41 @@ implements ArtificialIntelligence {
 			 }
 		 }
 		 return possibleMoves.get(auswahl);
+	}
+	
+	private static CardType rotateShiftCard(int times, CardType shiftCard) {
+		Openings cardOpenings = new Openings();  	
+		// Drehung der Karte
+		for( int i = 0; i < times; ++i ){
+			cardOpenings = new Openings();			
+			if(shiftCard.getOpenings().isTop()){
+				cardOpenings.setRight(true);
+			} 
+			if(shiftCard.getOpenings().isRight()){
+				cardOpenings.setBottom(true);
+			} 
+			if(shiftCard.getOpenings().isBottom()){
+				cardOpenings.setLeft(true);
+			} 
+			if(shiftCard.getOpenings().isLeft()){
+				cardOpenings.setTop(true);
+			} 
+			shiftCard.setOpenings(cardOpenings);
+		}	
+		return shiftCard;
+	}
+	
+	public static PositionType copyPositionType(PositionType position) {
+		PositionType copy = new PositionType();
+		copy.setCol(position.getCol());
+		copy.setRow(position.getRow());
+		return copy;
+	}
+	
+	public static PositionType createPositionType(int col, int row) {
+		PositionType position = new PositionType();
+		position.setCol(col);
+		position.setRow(row);
+		return position;
 	}
 }

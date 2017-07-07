@@ -42,4 +42,7 @@ public class Turn {
 	public void setBoard(BoardType board) {
 		this.board = board;
 	}
+	public String toString() {
+		return "(" + newCardPosition.getCol() + ";" + newCardPosition.getRow() + ")";
+	}
 }

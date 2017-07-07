@@ -1,5 +1,6 @@
 package client;
 
+import de.fhac.mazenet.server.generated.AcceptMessageType;
 import de.fhac.mazenet.server.generated.AwaitMoveMessageType;
 import de.fhac.mazenet.server.generated.LoginMessageType;
 import de.fhac.mazenet.server.generated.MazeCom;
@@ -12,13 +13,7 @@ import de.fhac.mazenet.server.generated.MoveMessageType;
 
 public class Client {
 	private static int id;
-	
-	private static MoveMessageType getNextMove(AwaitMoveMessageType awaitMoveMessage, int id) {
-		KI ki = new KI(awaitMoveMessage, id);
-		return ki.getMove();
-//		KIThilo ki = new KIThilo(id);
-//		return ki.getNextMove(awaitMoveMessage);
-	}
+	private static ArtificialIntelligence AI = null;
 	
 	public static void main(String[] args) {
 		int port = 5432;
@@ -27,7 +22,11 @@ public class Client {
 		if (args.length > 0)
 			IP = args[0];
 		if (args.length > 1)
+		try {
 			port = Integer.parseInt(args[1]);
+		} catch(Exception e) {
+			System.out.println("Der angebene Port \"" + args[1] + "\" ist kein gültiger Wert. Stelle auf Standardport " + port);
+		}
 
 		SSLConnection connection = null;
 		System.out.println("Baue Verbindung zu Server auf...");
@@ -56,13 +55,27 @@ public class Client {
 		System.out.println("Antwort vom Server erhalten");
 
 		id = reply.getLoginReplyMessage().getNewID();
+		AI = new KIThilo(id);
 		System.out.println("Die ID dieses Clients ist: " + Client.id);
 		
 		while(true) {
 			reply = connection.receiveFromServer();
 			
+			if(reply.getWinMessage() != null)
+				break;
+			if(reply.getDisconnectMessage() != null)
+				break;
 			AwaitMoveMessageType awaitMoveMessage = reply.getAwaitMoveMessage();
-			MoveMessageType moveMessageType = getNextMove(awaitMoveMessage, id);
+			MoveMessageType moveMessageType = null;
+			try {
+				moveMessageType = AI.getNextMove(awaitMoveMessage);
+			} catch(Exception e) {
+				AI = new KI(id);
+				moveMessageType = AI.getNextMove(awaitMoveMessage);
+			}
+			
+			if(AI instanceof KI)
+				AI = new KIThilo(id);
 			
 			mazecom = new MazeCom();
 			mazecom.setMcType(MazeComType.MOVE);
@@ -70,6 +83,14 @@ public class Client {
 			connection.sendToServer(mazecom);
 			
 			reply = connection.receiveFromServer();
+			AcceptMessageType acceptMessage = reply.getAcceptMessage();
+			if(acceptMessage.isAccept() == false) {
+				AI = new KI(id);
+				System.out.println("Eine Runde mit der Random-KI");
+			} 
 		}
+		System.out.println("GG");
+		System.out.println("Trenne Verbindung zum Server...");
+		connection.closeConnection();
 	}
 }

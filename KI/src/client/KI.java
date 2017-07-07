@@ -8,13 +8,14 @@ import de.fhac.mazenet.server.Position;
 import de.fhac.mazenet.server.generated.AwaitMoveMessageType;
 import de.fhac.mazenet.server.generated.BoardType;
 import de.fhac.mazenet.server.generated.CardType;
+import de.fhac.mazenet.server.generated.CardType.Openings;
 import de.fhac.mazenet.server.generated.MoveMessageType;
 import de.fhac.mazenet.server.generated.PositionType;
 import de.fhac.mazenet.server.generated.TreasureType;
 import de.fhac.mazenet.server.generated.TreasuresToGoType;
-import de.fhac.mazenet.server.generated.CardType.Openings;
 
-public class KI {
+public class KI 
+implements ArtificialIntelligence {
 	private AwaitMoveMessageType awaitMoveMessage;
 	
 	private PositionType ownPosition;
@@ -27,12 +28,22 @@ public class KI {
 	private List<TreasuresToGoType> treasuresToGo;
 	private List<TreasureType> foundTreasures;
 	
-	private int id;
+	private final int id;
 	private TreasureType treasure;
 	
-	public KI(AwaitMoveMessageType amm, int id) {
-		awaitMoveMessage = amm;
+	public KI(int id) {
 		this.id = id;
+	}
+	
+	@Override
+	public MoveMessageType getNextMove(AwaitMoveMessageType awaitMoveMessage) {
+		initComponents(awaitMoveMessage);
+		makeFakeMove(); 
+		return move;
+	}
+	
+	private void initComponents(AwaitMoveMessageType amm) {
+		awaitMoveMessage = amm;
 		
 		board = awaitMoveMessage.getBoard();
 		treasuresToGo = awaitMoveMessage.getTreasuresToGo();
@@ -45,12 +56,6 @@ public class KI {
 
 		ownPosition = extBoard.findPlayer( this.id );
 		treasurePosition = extBoard.findTreasure( this.treasure );
-		
-		makeFakeMove();
-	}
-	
-	public MoveMessageType getMove() {
-		return move;
 	}
 	
 	private void makeFakeMove() {
