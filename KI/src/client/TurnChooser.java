@@ -1,12 +1,14 @@
 package client;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import de.fhac.mazenet.server.Board;
 import de.fhac.mazenet.server.Position;
+import de.fhac.mazenet.server.generated.AwaitMoveMessageType;
 import de.fhac.mazenet.server.generated.BoardType;
 import de.fhac.mazenet.server.generated.CardType;
 import de.fhac.mazenet.server.generated.MoveMessageType;
@@ -15,22 +17,28 @@ import de.fhac.mazenet.server.generated.TreasureType;
 
 public class TurnChooser {
 	private final int playerId;
+	private boolean simulateFurtherTurns = true;
 	
-	// Double = value of the turn (the higher the better)
-	private HashMap<Double, Turn> turns;
+	// Speichert alle legalen Züge
+	private ArrayList<Turn> turns;
 	
 	public TurnChooser(int id){
 		playerId = id;
-		turns = new HashMap<>();
+		turns = new ArrayList<>();
 	}
 	
+	// Fügt einen Zug dessen in die Liste der legalen Züge ein und bewertet diese
 	public void addTurn(PositionType newCardPosition, TreasureType treasure,
 			CardType card, BoardType board){
+		if(newCardPosition == null || treasure == null || card == null || board == null)
+			throw new NullPointerException("Turn kann nicht initialisiert werden");
 		Turn turn = new Turn(newCardPosition, treasure, card, board);
-		turns.put(validateTurn(turn), turn);
+		turn.setRating(validateTurn(turn));
+		turns.add(turn);
 	}
 	
-	private double validateTurn(Turn turn){
+	// Funktion um einen Zug zu bewerten
+	public double validateTurn(Turn turn){
 		// TODO
 		Board board = new Board(turn.getBoard());
 		if(board.getForbidden() != null)
@@ -45,6 +53,10 @@ public class TurnChooser {
 		PositionType playerPosition = board.findPlayer(this.playerId);
 		List<Position> possibleMoves = board.getAllReachablePositions(playerPosition);
 		PositionType treasurePosition = board.findTreasure(turn.getTreasure());
+		// falls durch das Verschieben die Schatzkarte zur Schiebekarte wird
+		if(treasurePosition == null) {
+			return Double.MAX_VALUE;
+		}
 		
 		double distance = -1.0;
 		
@@ -64,37 +76,55 @@ public class TurnChooser {
 		return distance;
 	}
 	
-	public Turn getBestTurn(){
-		// Converting Keys to a List and sort them
-		List<Double> keys = new ArrayList<Double>();
-		keys.addAll(turns.keySet());
-		
-		Collections.sort(keys);
-		if(keys.get(0) != null && keys.get(1) != null) {
-			if(keys.get(0) == keys.get(1)) { // falls es mehrere gleichwertige Züge gibt, hinsichtlich der geminderten Entfernung zum Schatz
-				System.out.println("Mehrere Gleichwertige");
-				ArrayList<Turn> equalDistanceTurns = new ArrayList<>();
-				for(int i = 0; i < keys.size(); i++) {
-					if(keys.get(0) == keys.get(i)) {
-						equalDistanceTurns.add(turns.get(keys.get(i)));
-					} else {
-						break;
+	// Ermittelt den Bestmöglichen Zug (Rekursionstiefe im Standardfall 2)
+	public Turn getBestTurn() {
+		ArrayList<Turn> bestTurns = getBestTurns();
+
+		if(this.simulateFurtherTurns == true) {
+			if (bestTurns.size() > 1) {
+//				bestTurns = getTurnsToDisturbEnemy(bestTurns);
+				if(bestTurns.size() > 1 && this.simulateFurtherTurns == true) {
+					for(int i = 0; i < 3; i++) {
+						bestTurns = simulateFurtherTurns(bestTurns);
 					}
 				}
-				return getTurnToDisturbEnemy(equalDistanceTurns);
 			}
 		}
-		return turns.get(keys.get(0));
+//		System.out.println(isForbidden(bestTurns.get(0)));
+		return bestTurns.get(0);
+	}
+	
+	// Gibt alle Bestmöglichen Züge aus der Liste der legalen Züge zurück, die gleichwertig sind
+	private ArrayList<Turn> getBestTurns(){
+		ArrayList<Turn> bestTurns = new ArrayList<>();
+		double lowestDistance = getLowestDistance(turns);
+		for(Turn turn : turns) 
+			if(turn.getRating() == lowestDistance)
+				bestTurns.add(turn);
+		return bestTurns;
+	}
+	
+	// Ermittelt die kürzeste Distanz zum Schatz, die nach Ausführung eines Zuges möglich ist
+	private double getLowestDistance(ArrayList<Turn> turns) {
+		double lowestDistance = Double.MAX_VALUE;
+		for(Turn turn : turns) {
+			if(turn.getRating() < lowestDistance) {
+				lowestDistance = turn.getRating();
+			}
+		}
+		return lowestDistance;
 	}
 	
 	public void deleteAllTurns() {
 		turns.clear();
 	}
 	
-	private Turn getTurnToDisturbEnemy(ArrayList<Turn> equalDistanceTurns) {
+	// Gibt alle Züge zurück, die den Gegner behindern
+	private ArrayList<Turn> getTurnsToDisturbEnemy(ArrayList<Turn> equalDistanceTurns) {
 		// scanning if there are enemies at the edge
+		ArrayList<Turn> turns = new ArrayList<Turn>();
 		Board board = new Board(equalDistanceTurns.get(0).getBoard());
-		Turn turn = equalDistanceTurns.get(0);
+		
 		for(int i = 1; i < 5; i++) {
 			if(i == playerId)
 				continue;
@@ -122,14 +152,17 @@ public class TurnChooser {
 					
 					if(newTurn != null) {
 						System.out.println("Neuer Zug gesetzt!");
-						turn = newTurn;
+						turns.add(newTurn);
 					}
 				}
 			}
 		}
-		return turn;
+		if(turns.size() == 0)
+			return equalDistanceTurns;
+		return turns;
 	}
 	
+	// Gibt den Zug zurück, der auf gegebene Position gesetzt wird (dessen Schiebekarte auf die Position gesetzt werden soll)
 	private Turn checkIfTurnsContainPosition(PositionType shiftPosition, ArrayList<Turn> turns) {
 		PositionType position;
 		for(int i = 0; i < turns.size(); i++) {
@@ -139,5 +172,107 @@ public class TurnChooser {
 			}
 		}
 		return null;
+	}
+	
+	// Simuliert welcher Zug geeigneter ist in Anbetracht des weiteren Spielverlaufs (Störungen durch andere Spieler werden nicht berücksichtigt)
+	private ArrayList<Turn> simulateFurtherTurns(ArrayList<Turn> turns){
+		if(simulateFurtherTurns == false)
+			return turns;
+		
+		// Wenn schon ein Weg zum Ziel gefunden worden ist, muss dieser nicht mehr gesucht werden
+		if(getLowestDistance(turns) == 0.)
+			return turns;
+		
+//		ArrayList<ArrayList<Turn>> splittedTurns = new ArrayList<ArrayList<Turn>>();
+//		System.out.println("turn Size: " + turns.size());
+//		splittedTurns.add(listToArrayList(turns.subList(0, turns.size()/4)));
+//		splittedTurns.add(listToArrayList(turns.subList(turns.size()/4, turns.size()/2)));
+//		splittedTurns.add(listToArrayList(turns.subList(turns.size()/2, (turns.size()/2)+(turns.size()/4))));
+//		splittedTurns.add(listToArrayList(turns.subList((turns.size()/2)+(turns.size()/4), turns.size()-1)));
+//		
+//		ArrayList<Turn> newTurns = new ArrayList<Turn>();
+//		
+//		Thread th = new Thread(() -> newTurns.addAll(iterateOverTurnsForSimulation(splittedTurns.get(0))));
+//		Thread th2 = new Thread(() -> newTurns.addAll(iterateOverTurnsForSimulation(splittedTurns.get(1))));
+//		Thread th3 = new Thread(() -> newTurns.addAll(iterateOverTurnsForSimulation(splittedTurns.get(2))));
+//		Thread th4 = new Thread(() -> newTurns.addAll(iterateOverTurnsForSimulation(splittedTurns.get(3))));
+//		
+//		th.start();
+//		th2.start();
+//		th3.start();
+//		th4.start();
+//		
+//		try {
+//			th.join();
+//			th2.join();
+//			th3.join();
+//			th4.join();
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
+//		
+//		return newTurns;
+		return iterateOverTurnsForSimulation(turns);
+	}
+	
+	private ArrayList<Turn> iterateOverTurnsForSimulation(ArrayList<Turn> turns){
+		HashMap<Turn, Turn> simulatedTurns = new HashMap<>();
+		ArrayList<Turn> bestTurns = new ArrayList<Turn>();
+		AwaitMoveMessageType awaitMoveMessage = new AwaitMoveMessageType();
+		double distanceSecond = 0.1;
+		
+		for(int i = 0; i < turns.size(); i++) {
+			Turn turn = turns.get(i);
+			awaitMoveMessage.setTreasure(turn.getTreasure());
+			
+			Board board = new Board(turn.getBoard());
+			MoveMessageType simulatedMove = new MoveMessageType();
+			simulatedMove.setShiftPosition(turn.getNewCardPosition());
+			simulatedMove.setNewPinPos(board.findPlayer(this.playerId));
+			simulatedMove.setShiftCard(turn.getCard());
+			board.setTreasure(turn.getTreasure());
+			board = board.fakeShift(simulatedMove);
+			
+			KIThilo KI = new KIThilo(this.playerId);
+			KI.setSimulateFurtherTurns(false);
+			Turn secondTurn = KI.getNextMove(board);
+			secondTurn.setRating(validateTurn(secondTurn));
+			if(turn.getRating() > secondTurn.getRating() && secondTurn.getRating() <= distanceSecond) {
+				distanceSecond = secondTurn.getRating();
+				simulatedTurns.put(secondTurn, turn);
+			}
+		}
+		if(simulatedTurns.size() > 0) {
+			Set<Turn> bestSecondTurns = simulatedTurns.keySet(); 
+			Iterator<Turn> it = bestSecondTurns.iterator();
+			while(it.hasNext()) {
+				bestTurns.add(simulatedTurns.get(it.next()));
+			}
+			return bestTurns;
+		}
+		return turns;
+	}
+	
+	// Legt fest, ob weitere mögliche Züge bei der Auwahl des besten Zuges simuliert werden sollen
+	public void setSimulateFurtherTurns(boolean simulation) {
+		this.simulateFurtherTurns = simulation;
+	}
+	
+	public boolean getSimulateFurtherTurns() {
+		return this.simulateFurtherTurns;
+	}
+	
+	private boolean isForbidden(Turn turn) {
+		PositionType position = turn.getBoard().getForbidden();
+		PositionType turnPosition = turn.getNewCardPosition();
+		if(position.getCol() == turnPosition.getCol() && position.getRow() == turnPosition.getRow())
+			return true;
+		return false;
+	}
+	
+	private ArrayList<Turn> listToArrayList(List<Turn> list){
+		ArrayList<Turn> arrayList = new ArrayList<Turn>();
+		arrayList.addAll(list);
+		return arrayList;
 	}
 }

@@ -10,12 +10,29 @@ public class Turn {
 	private TreasureType treasure;
 	private CardType card;
 	private BoardType board;
+	private double rating = -1.;
+	
+	public Turn(PositionType newCardPosition, TreasureType treasure, CardType card, BoardType board, double rating){
+		this.newCardPosition = newCardPosition;
+		this.treasure = treasure;
+		this.card = card;
+		this.board = board;
+		this.rating = rating;
+	}
 	
 	public Turn(PositionType newCardPosition, TreasureType treasure, CardType card, BoardType board){
 		this.newCardPosition = newCardPosition;
 		this.treasure = treasure;
 		this.card = card;
 		this.board = board;
+	}
+	
+	public double getRating() {
+		return rating;
+	}
+
+	public void setRating(double rating) {
+		this.rating = rating;
 	}
 	
 	public PositionType getNewCardPosition() {
@@ -43,6 +60,6 @@ public class Turn {
 		this.board = board;
 	}
 	public String toString() {
-		return "(" + newCardPosition.getCol() + ";" + newCardPosition.getRow() + ")";
+		return "(" + newCardPosition.getCol() + ";" + newCardPosition.getRow() + "), distance:" + this.getRating();
 	}
 }

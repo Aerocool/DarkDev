@@ -25,7 +25,10 @@ implements ArtificialIntelligence {
 	private TreasureType treasure;
 	private TurnChooser turnChooser;
 	
-	public KIThilo(int id) {this.id = id;}
+	public KIThilo(int id) {
+		this.id = id;
+		turnChooser = new TurnChooser(this.id);
+	}
 	
 	private void initComponents(AwaitMoveMessageType awaitMoveMessage){
 		board = awaitMoveMessage.getBoard();
@@ -33,7 +36,17 @@ implements ArtificialIntelligence {
 		extBoard = new Board(board);
 		ownPosition = extBoard.findPlayer( this.id );
 		treasurePosition = extBoard.findTreasure( this.treasure );
-		turnChooser = new TurnChooser(this.id);
+	}
+	
+	public Turn getNextMove(Board extBoard) {
+		AwaitMoveMessageType awaitMoveMessage = new AwaitMoveMessageType();
+		awaitMoveMessage.setBoard(extBoard);
+		if(extBoard.getTreasure() == null)
+			System.out.println("extBoard.getTreasure() ist null");
+		awaitMoveMessage.setTreasure(extBoard.getTreasure());
+		MoveMessageType moveMessage = getNextMove(awaitMoveMessage);
+		Turn turn = new Turn(moveMessage.getShiftPosition(), extBoard.getTreasure(), moveMessage.getShiftCard(), extBoard);
+		return turn;
 	}
 
 	@Override
@@ -96,6 +109,7 @@ implements ArtificialIntelligence {
 		 int auswahl = -1;
 		 
 		 for( int i = 0; i < possibleMoves.size(); ++i ){
+			 treasurePosition = extBoard.findTreasure(treasure);
 			 if( treasurePosition != null) {
 			 xdiff = possibleMoves.get(i).getRow()-treasurePosition.getRow();
 			 ydiff = possibleMoves.get(i).getCol()-treasurePosition.getCol();
@@ -150,5 +164,13 @@ implements ArtificialIntelligence {
 		position.setCol(col);
 		position.setRow(row);
 		return position;
+	}
+	
+	public void setSimulateFurtherTurns(boolean simulation) {
+		this.turnChooser.setSimulateFurtherTurns(simulation);
+	}
+	
+	public boolean getSimulateFurtherTurns() {
+		return this.turnChooser.getSimulateFurtherTurns();
 	}
 }
