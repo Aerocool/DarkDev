@@ -90,7 +90,6 @@ public class TurnChooser {
 				}
 			}
 		}
-//		System.out.println(isForbidden(bestTurns.get(0)));
 		return bestTurns.get(0);
 	}
 	
@@ -262,6 +261,7 @@ public class TurnChooser {
 		return this.simulateFurtherTurns;
 	}
 	
+	// Gibt zurück, over der üvergebene Zug verboten ist
 	private boolean isForbidden(Turn turn) {
 		PositionType position = turn.getBoard().getForbidden();
 		PositionType turnPosition = turn.getNewCardPosition();

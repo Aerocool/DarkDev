@@ -91,7 +91,7 @@ public class Settings {
         LOCALE = new Locale(prop.getProperty("LOCALE", "de"));
         LOGINTIMEOUT = Integer.parseInt(prop.getProperty("LOGINTIMEOUT", "120000"));
         LOGINTRIES = Integer.parseInt(prop.getProperty("LOGINTRIES", "3"));
-        MOVEDELAY = Integer.parseInt(prop.getProperty("MOVEDELAY", "100"));
+        MOVEDELAY = Integer.parseInt(prop.getProperty("MOVEDELAY", "1000"));
         MOVETRIES = Integer.parseInt(prop.getProperty("MOVETRIES", "3"));
         PORT = Integer.parseInt(prop.getProperty("PORT", "5123"));
         SSL_PORT = Integer.parseInt(prop.getProperty("SSL_PORT", "5432"));
@@ -99,7 +99,7 @@ public class Settings {
 //        SSL_CERT_STORE_PASSWD = prop.getProperty("SSL_CERT_STORE_PASSWD", "");
         SSL_CERT_STORE_PASSWD = prop.getProperty("SSL_CERT_STORE_PASSWD", "geheim");
         SENDTIMEOUT = Integer.parseInt(prop.getProperty("SENDTIMEOUT", "2000"));
-        SHIFTDELAY = Integer.parseInt(prop.getProperty("SHIFTDELAY", "500"));
+        SHIFTDELAY = Integer.parseInt(prop.getProperty("SHIFTDELAY", "5000"));
         TESTBOARD = Boolean.parseBoolean(prop.getProperty("TESTBOARD", "true"));
         TESTBOARD_SEED = Integer.parseInt(prop.getProperty("TESTBOARD_SEED", "0"));
         DEBUGLEVEL = DebugLevel.DEFAULT;

@@ -34,15 +34,15 @@ implements ArtificialIntelligence {
 		board = awaitMoveMessage.getBoard();
 		treasure = awaitMoveMessage.getTreasure();
 		extBoard = new Board(board);
-		ownPosition = extBoard.findPlayer( this.id );
-		treasurePosition = extBoard.findTreasure( this.treasure );
+		
+		ownPosition = extBoard.findPlayer(this.id);
+		treasurePosition = extBoard.findTreasure(this.treasure);
+//		updateEnemyInformation();
 	}
 	
 	public Turn getNextMove(Board extBoard) {
 		AwaitMoveMessageType awaitMoveMessage = new AwaitMoveMessageType();
 		awaitMoveMessage.setBoard(extBoard);
-		if(extBoard.getTreasure() == null)
-			System.out.println("extBoard.getTreasure() ist null");
 		awaitMoveMessage.setTreasure(extBoard.getTreasure());
 		MoveMessageType moveMessage = getNextMove(awaitMoveMessage);
 		Turn turn = new Turn(moveMessage.getShiftPosition(), extBoard.getTreasure(), moveMessage.getShiftCard(), extBoard);
@@ -173,4 +173,23 @@ implements ArtificialIntelligence {
 	public boolean getSimulateFurtherTurns() {
 		return this.turnChooser.getSimulateFurtherTurns();
 	}
+	
+//	private void updateEnemyInformation() {
+//		if(enemies.length == 0)
+//			enemies = new Enemy[4];
+//		for(int i = 1; i < 5; i++) {
+//			if(i == id)
+//				continue;
+//			if(enemies[i] == null) {
+//				enemies[i] = new Enemy(i);
+//				enemies[i].setFoundedTreasures(0);
+//			}
+//			
+//			// Position aktualisieren
+//			Position position = extBoard.findPlayer(i);
+//			enemies[i].setCurrentPosition(new Position(position));
+//			
+//			// rausfinden ob neue Schätze gefunden worden sind
+//		}
+//	}
 }
