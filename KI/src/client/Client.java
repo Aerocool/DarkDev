@@ -1,5 +1,10 @@
 package client;
 
+import java.util.concurrent.ThreadLocalRandom;
+
+import KI.ArtificialIntelligence;
+import KI.KI;
+import KI.KIThilo;
 import de.fhac.mazenet.server.generated.AcceptMessageType;
 import de.fhac.mazenet.server.generated.AwaitMoveMessageType;
 import de.fhac.mazenet.server.generated.LoginMessageType;
@@ -96,7 +101,6 @@ public class Client {
 			AcceptMessageType acceptMessage = reply.getAcceptMessage();
 			if(acceptMessage.isAccept() == false) {
 				AI = new KI(playerId);
-				System.out.println("Eine Runde mit der Random-KI");
 			} 
 		}
 		System.out.println("GG");
@@ -118,9 +122,10 @@ public class Client {
 		}
 		System.out.println("Eingebene IP ist: " + IP);
 		
-		Client client = new Client(IP, port, "DarkDev");
+		Client client = new Client(IP, port, "DarkDevGood");
 		client.setSimulateFurtherTurns(true);
 		client.connectToServer();
+		
 //		Client client2 = new Client(IP, port, "DarkDev");
 //		client2.setSimulateFurtherTurns(false);
 //		Client client3 = new Client(IP, port, "DarkDev");

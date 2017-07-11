@@ -87,11 +87,11 @@ public class Settings {
             }
         }
         MAX_NAME_LENGTH = Integer.parseInt(prop.getProperty("MAX_NAME_LENGTH", "30"));
-        NUMBER_OF_PLAYERS = Integer.parseInt(prop.getProperty("NUMBER_OF_PLAYERS", "4"));
+        NUMBER_OF_PLAYERS = Integer.parseInt(prop.getProperty("NUMBER_OF_PLAYERS", "1"));
         LOCALE = new Locale(prop.getProperty("LOCALE", "de"));
         LOGINTIMEOUT = Integer.parseInt(prop.getProperty("LOGINTIMEOUT", "120000"));
         LOGINTRIES = Integer.parseInt(prop.getProperty("LOGINTRIES", "3"));
-        MOVEDELAY = Integer.parseInt(prop.getProperty("MOVEDELAY", "1000"));
+        MOVEDELAY = Integer.parseInt(prop.getProperty("MOVEDELAY", "1"));
         MOVETRIES = Integer.parseInt(prop.getProperty("MOVETRIES", "3"));
         PORT = Integer.parseInt(prop.getProperty("PORT", "5123"));
         SSL_PORT = Integer.parseInt(prop.getProperty("SSL_PORT", "5432"));
@@ -99,8 +99,8 @@ public class Settings {
 //        SSL_CERT_STORE_PASSWD = prop.getProperty("SSL_CERT_STORE_PASSWD", "");
         SSL_CERT_STORE_PASSWD = prop.getProperty("SSL_CERT_STORE_PASSWD", "geheim");
         SENDTIMEOUT = Integer.parseInt(prop.getProperty("SENDTIMEOUT", "2000"));
-        SHIFTDELAY = Integer.parseInt(prop.getProperty("SHIFTDELAY", "5000"));
-        TESTBOARD = Boolean.parseBoolean(prop.getProperty("TESTBOARD", "true"));
+        SHIFTDELAY = Integer.parseInt(prop.getProperty("SHIFTDELAY", "1"));
+        TESTBOARD = Boolean.parseBoolean(prop.getProperty("TESTBOARD", "false"));
         TESTBOARD_SEED = Integer.parseInt(prop.getProperty("TESTBOARD_SEED", "0"));
         DEBUGLEVEL = DebugLevel.DEFAULT;
         String ui = prop.getProperty("USERINTERFACE", "MazeFX");

@@ -70,7 +70,6 @@ public class SSLConnection {
 			outputStream.close();
 			inputStream.close();
 			sslSocket.close();
-			tempFile.delete();
 		}
 		catch (Exception e) {
 			e.printStackTrace();
