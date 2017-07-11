@@ -73,10 +73,10 @@ public class TurnChooser {
 				distance = tmpDistance;
 			}
 		}
-		if(distance != 0) {
-			if(playerPosition.getCol() == 0 || playerPosition.getCol() == 6 || playerPosition.getRow() == 0 || playerPosition.getRow() == 6)
-				distance += Double.MIN_VALUE;
-		}
+//		if(distance != 0) {
+//			if(playerPosition.getCol() == 0 || playerPosition.getCol() == 6 || playerPosition.getRow() == 0 || playerPosition.getRow() == 6)
+//				distance += Double.MIN_VALUE;
+//		}
 		return distance;
 	}
 	
@@ -87,6 +87,7 @@ public class TurnChooser {
 			if (this.simulateFurtherTurns == true) {
 				bestTurns = simulateFurtherTurns(bestTurns);
 				bestTurns = eliminateBadShiftCards(bestTurns);
+				bestTurns = improveReachablePositions(bestTurns);
 				bestTurns = reduceReachablePositionsForEnemies(bestTurns);
 				bestTurns = getTurnsToDisturbEnemy(bestTurns);
 			}
@@ -94,12 +95,35 @@ public class TurnChooser {
 		return bestTurns.get(0);
 	}
 
+	private ArrayList<Turn> improveReachablePositions(ArrayList<Turn> bestTurns) {
+		int reachablePositions = -1;
+		ArrayList<Turn> moreReachablePositions = new ArrayList<Turn>();
+		for(Turn turn : bestTurns) {
+			Board board = new Board(turn.getBoard());
+			PositionType positionsPlayer = board.findPlayer(this.playerId);
+			MoveMessageType simulatedMove = new MoveMessageType();
+			simulatedMove.setShiftPosition(turn.getNewCardPosition());
+			simulatedMove.setNewPinPos(positionsPlayer);
+			simulatedMove.setShiftCard(turn.getCard());
+			board = board.fakeShift(simulatedMove);
+
+			if(reachablePositions == board.getAllReachablePositions(positionsPlayer).size()) {
+				moreReachablePositions.add(turn);
+			}
+			if(board.getAllReachablePositions(positionsPlayer).size() > reachablePositions) {
+				reachablePositions = board.getAllReachablePositions(positionsPlayer).size();
+				moreReachablePositions.clear();
+				moreReachablePositions.add(turn);
+			}
+		}
+		return moreReachablePositions;
+	}
+
 	private ArrayList<Turn> reduceReachablePositionsForEnemies(ArrayList<Turn> bestTurns) {
 		int openingsSum = 0;
 		int openings = Integer.MAX_VALUE;
 		ArrayList<Turn> enemyDisturb = new ArrayList<Turn>();
 		for(Turn turn : bestTurns) {
-			
 			Board board = new Board(turn.getBoard());
 			
 			for(int i = 1; i < 5; i++) {
@@ -258,12 +282,14 @@ public class TurnChooser {
 			KI.setSimulateFurtherTurns(false);
 			Turn secondTurn = KI.getNextMove(board);
 			secondTurn.setRating(validateTurn(secondTurn));
-			if(turn.getRating() > secondTurn.getRating() && secondTurn.getRating() < distanceSecond) {
-				distanceSecond = secondTurn.getRating();
-				simulatedTurns.clear();
+			
+			if(secondTurn.getRating() == distanceSecond) {
 				simulatedTurns.put(secondTurn, turn);
 			}
-			if(secondTurn.getRating() == distanceSecond) {
+			if(turn.getRating() >= secondTurn.getRating() && secondTurn.getRating() <= distanceSecond) {
+				bestTurns.clear();
+				distanceSecond = secondTurn.getRating();
+				simulatedTurns.clear();
 				simulatedTurns.put(secondTurn, turn);
 			}
 			

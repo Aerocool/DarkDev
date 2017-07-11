@@ -21,8 +21,10 @@ public class Client {
 	private int port;
 	private String playerName;
 	private boolean simulateFurtherTurns = true;
+	private int turnCount;
 	
 	public Client(String IP, int port, String playerName) {
+		turnCount = 1;
 		this.playerName = playerName;
 		this.IP = IP;
 		this.port = port;
@@ -85,13 +87,14 @@ public class Client {
 				AI = new KI(playerId);
 				moveMessageType = AI.getNextMove(awaitMoveMessage);
 			}
+			System.out.println("Der " + turnCount + ". Zug");
+			this.turnCount++;
 			
 			if(AI instanceof KI) {
 				KIThilo ai = new KIThilo(playerId);
 				ai.setSimulateFurtherTurns(this.simulateFurtherTurns);
 				AI = ai;
 			}
-			
 			mazecom = new MazeCom();
 			mazecom.setMcType(MazeComType.MOVE);
 			mazecom.setMoveMessage(moveMessageType);
@@ -122,7 +125,7 @@ public class Client {
 		}
 		System.out.println("Eingebene IP ist: " + IP);
 		
-		Client client = new Client(IP, port, "DarkDevGood");
+		Client client = new Client(IP, port, "DarkDev");
 		client.setSimulateFurtherTurns(true);
 		client.connectToServer();
 		
